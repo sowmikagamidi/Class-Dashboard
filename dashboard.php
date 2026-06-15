@@ -304,7 +304,7 @@ if (!isset($tutorix_user_type) || ($tutorix_user_type != 'A' && $tutorix_user_ty
             padding: 7px 10px;
             border-bottom: 1px solid #f1f5f9;
             color: #475569;
-            font-size: 13px;
+            font-size: 12px;
         }
         
         .data-table tr:hover td {
@@ -490,7 +490,7 @@ if (!isset($tutorix_user_type) || ($tutorix_user_type != 'A' && $tutorix_user_ty
             color: #1e40af;
         }
         
-        /* Tabs */
+        /* Tabs for Student Status only */
         .status-tabs {
             display: flex;
             gap: 8px;
@@ -646,7 +646,7 @@ if (!isset($tutorix_user_type) || ($tutorix_user_type != 'A' && $tutorix_user_ty
                 </select>
             </div>
             <div class="button-group">
-                <button id="applyBtn" class="btn-apply"><i class="fas fa-search"></i> Apply Filter</button>
+                <button id="applyBtn" class="btn-apply"><i class="fas fa-search"></i> Search</button>
                 <button id="resetBtn" class="btn-reset"><i class="fas fa-undo-alt"></i> Reset</button>
             </div>
         </div>
@@ -757,49 +757,18 @@ if (!isset($tutorix_user_type) || ($tutorix_user_type != 'A' && $tutorix_user_ty
             </div>
         </div>
 
-        <!-- Teacher & Mentor View -->
+        <!-- Teacher & Mentor Overview - SIMPLIFIED (No tabs, just one table) -->
         <div class="card">
             <div class="card-header">
                 <h3><i class="fas fa-chalkboard-user" style="color: #8b5cf6;"></i> Teacher & Mentor Overview</h3>
             </div>
             <div class="card-body">
-                <div class="mini-stats-row">
-                    <div class="mini-stat">
-                        <div class="number" style="color: #10b981;" id="activeTeachers">0</div>
-                        <div class="label">Active</div>
-                    </div>
-                    <div class="mini-stat">
-                        <div class="number" style="color: #ef4444;" id="inactiveTeachers">0</div>
-                        <div class="label">Inactive</div>
-                    </div>
-                    <div class="mini-stat">
-                        <div class="number" style="color: #f97316;" id="expiringTeachers">0</div>
-                        <div class="label">Expiring Soon</div>
-                    </div>
-                </div>
                 
                 <div id="teacherFilterInfo" class="filter-info" style="display: none;"></div>
                 
-                <div class="status-tabs">
-                    <div class="status-tab active" data-tab="active-teachers">Active</div>
-                    <div class="status-tab" data-tab="inactive-teachers">Inactive</div>
-                    <div class="status-tab" data-tab="expiring-teachers">Expiring Soon</div>
-                </div>
-                
-                <div id="active-teachers" class="tab-content active">
-                    <div class="scrollable-container" id="activeTeachersContainer">
-                        <div class="empty-state">Loading active teachers...</div>
-                    </div>
-                </div>
-                <div id="inactive-teachers" class="tab-content">
-                    <div class="scrollable-container" id="inactiveTeachersContainer">
-                        <div class="empty-state">Loading inactive teachers...</div>
-                    </div>
-                </div>
-                <div id="expiring-teachers" class="tab-content">
-                    <div class="scrollable-container" id="expiringTeachersContainer">
-                        <div class="empty-state">Loading expiring teachers...</div>
-                    </div>
+                <!-- Single table for all teachers -->
+                <div class="scrollable-container" id="allTeachersContainer">
+                    <div class="empty-state">Loading teachers...</div>
                 </div>
             </div>
         </div>
@@ -927,7 +896,7 @@ $(document).ready(function() {
         else $('#batch').html('<option value="">All Sections</option>');
     });
     
-    // Teacher tabs
+    // Student status tabs only (teacher tabs removed)
     $('.status-tab').click(function() {
         var parentCard = $(this).closest('.card');
         parentCard.find('.status-tab').removeClass('active');
@@ -1018,7 +987,6 @@ function updateDashboard(data) {
     }
     
     if(data.performance) {
-        $('#overallPerformance').text((data.performance.overall_percentage || 0) + '%');
         $('#overallPerformanceText').text((data.performance.overall_percentage || 0) + '%');
         $('#performanceBar').css('width', (data.performance.overall_percentage || 0) + '%');
         updateSubjectsList('#subjectPerformance', data.performance.subjects, 'percentage');
@@ -1046,20 +1014,21 @@ function updateEnrollmentTable(data) {
     var boardClass = {'C':'badge-cbse','I':'badge-icse','W':'badge-wbbse','K':'badge-cambridge'};
     var html = '<table class="data-table"><thead><tr><th>Board</th><th>Class</th><th>Section</th><th>Count</th></tr></thead><tbody>';
     $.each(data.data, function(i, row) {
-        html += '<tr><td><span class="badge ' + boardClass[row.board_id] + '">' + row.board_name + '</span></td>' +
-                '<td>' + row.class_name + '</td>' +
-                '<td>' + (row.section !== 'N/A' ? 'Section ' + row.section : 'All') + '</td>' +
-                '<td class="student-count">' + row.student_count + '</td>' +
+        html += '<tr><td style="vertical-align: top;"><span class="badge ' + boardClass[row.board_id] + '">' + row.board_name + '</span></td>' +
+                '<td style="vertical-align: top;">' + row.class_name + '</td>' +
+                '<td style="vertical-align: top;">' + (row.section !== 'N/A' ? 'Section ' + row.section : 'All') + '</td>' +
+                '<td style="vertical-align: top;" class="student-count">' + row.student_count + '</td>' +
                 '</tr>';
     });
-    html += '</tbody></tr>';
+    html += '</tbody></table>';
     container.html(html);
 }
 
+// UPDATED: Simplified Teacher Mentor View - Single table, no tabs
 function updateTeacherMentorView(data) {
-    $('#activeTeachers').text(data.active_count || 0);
-    $('#inactiveTeachers').text(data.inactive_count || 0);
-    $('#expiringTeachers').text(data.expiring_soon_count || 0);
+    // Show total teachers count from teachers_list
+    var teachersList = data.teachers_list || [];
+    $('#totalTeachersCount').text(teachersList.length);
     
     var hasFilters = (currentFilters.class_id || (currentFilters.board_id != '') || currentFilters.batch_id);
     if (hasFilters) {
@@ -1072,69 +1041,50 @@ function updateTeacherMentorView(data) {
         $('#teacherFilterInfo').hide();
     }
     
-    var activeHtml = '<table class="data-table"><thead><tr><th>Name</th><th>Role</th><th>Section</th><th>Class</th><th>Board</th><th>Subject</th></tr></thead><tbody>';
-    $.each(data.active_teachers || [], function(i, teacher) {
-        var roleBadge = teacher.user_type == 'T' ? '<span class="badge badge-teacher">Teacher</span>' : '<span class="badge badge-lct">Live Class</span>';
-        var boardName = '';
-        if (teacher.board_id == 'C') boardName = 'CBSE';
-        else if (teacher.board_id == 'I') boardName = 'ICSE';
-        else if (teacher.board_id == 'W') boardName = 'WBBSE';
-        else if (teacher.board_id == 'K') boardName = 'Cambridge';
-        else boardName = teacher.board_id || 'N/A';
-        
-        activeHtml += '<tr><td style="vertical-align: top;"><strong>' + teacher.full_name + '</strong></td>' +
-                      '<td style="vertical-align: top;">' + roleBadge + '</td>' +
-                      '<td style="vertical-align: top;">' + (teacher.section ? 'Section ' + teacher.section : (teacher.batch_id ? 'Batch ' + teacher.batch_id : 'N/A')) + '</td>' +
-                      '<td style="vertical-align: top;">' + (teacher.class_id ? 'Class ' + teacher.class_id : 'N/A') + '</td>' +
-                      '<td style="vertical-align: top;"><span class="badge badge-cbse">' + boardName + '</span></td>' +
-                      '<td style="vertical-align: top;">' + (teacher.subject_id || 'N/A') + '</td>' +
-                      '</tr>';
-    });
-    activeHtml += '</tbody></tr>';
-    $('#activeTeachersContainer').html(activeHtml || '<div class="empty-state">No active teachers found</div>');
+    // Single table for all teachers
+    var html = '<table class="data-table"><thead><tr>' +
+                '<th>Name</th>' +
+                '<th>Role</th>' +
+                '<th>Section</th>' +
+                '<th>Class</th>' +
+                '<th>Board</th>' +
+                '<th>Subject</th>' +
+                '</thead><tbody>';
     
-    var inactiveHtml = '<table class="data-table"><thead><tr><th>Name</th><th>Role</th><th>Section</th><th>Class</th><th>Board</th><th>Subject</th></tr></thead><tbody>';
-    $.each(data.inactive_teachers || [], function(i, teacher) {
-        var roleBadge = teacher.user_type == 'T' ? '<span class="badge badge-teacher">Teacher</span>' : '<span class="badge badge-lct">Live Class</span>';
-        var boardName = '';
-        if (teacher.board_id == 'C') boardName = 'CBSE';
-        else if (teacher.board_id == 'I') boardName = 'ICSE';
-        else if (teacher.board_id == 'W') boardName = 'WBBSE';
-        else if (teacher.board_id == 'K') boardName = 'Cambridge';
-        else boardName = teacher.board_id || 'N/A';
-        
-        inactiveHtml += '<tr><td style="vertical-align: top;"><strong>' + teacher.full_name + '</strong></td>' +
-                        '<td style="vertical-align: top;">' + roleBadge + '</td>' +
-                        '<td style="vertical-align: top;">' + (teacher.section ? 'Section ' + teacher.section : (teacher.batch_id ? 'Batch ' + teacher.batch_id : 'N/A')) + '</td>' +
-                        '<td style="vertical-align: top;">' + (teacher.class_id ? 'Class ' + teacher.class_id : 'N/A') + '</td>' +
-                        '<td style="vertical-align: top;"><span class="badge badge-cbse">' + boardName + '</span></td>' +
-                        '<td style="vertical-align: top;">' + (teacher.subject_id || 'N/A') + '</td>' +
-                        '</tr>';
-    });
-    inactiveHtml += '</tbody></tr>';
-    $('#inactiveTeachersContainer').html(inactiveHtml || '<div class="empty-state">No inactive teachers found</div>');
+    if (teachersList.length === 0) {
+        html += '<tr><td colspan="6" class="empty-state">No teachers found</td></tr>';
+    } else {
+        $.each(teachersList, function(i, teacher) {
+            var roleBadge = '';
+            if (teacher.role == 'Teacher') {
+                roleBadge = '<span class="badge badge-teacher">Teacher</span>';
+            } else if (teacher.role == 'Live Class Teacher') {
+                roleBadge = '<span class="badge badge-lct">Live Class</span>';
+            } else {
+                roleBadge = '<span class="badge badge-teacher">' + (teacher.role || 'Staff') + '</span>';
+            }
+            
+            var boardName = teacher.board_name || 'N/A';
+            var boardClass = '';
+            if (boardName == 'CBSE') boardClass = 'badge-cbse';
+            else if (boardName == 'ICSE') boardClass = 'badge-icse';
+            else if (boardName == 'WBBSE') boardClass = 'badge-wbbse';
+            else if (boardName == 'Cambridge') boardClass = 'badge-cambridge';
+            else boardClass = 'badge-other';
+            
+            html += '<tr>' +
+                    '<td style="vertical-align: top;"><strong>' + escapeHtml(teacher.full_name) + '</strong></td>' +
+                    '<td style="vertical-align: top;">' + roleBadge + '</td>' +
+                    '<td style="vertical-align: top;">' + (teacher.section && teacher.section != 'N/A' ? 'Section ' + teacher.section : (teacher.batch_id ? 'Batch ' + teacher.batch_id : '—')) + '</td>' +
+                    '<td style="vertical-align: top;">' + (teacher.class_display && teacher.class_display != 'Class ' ? teacher.class_display : (teacher.class_id ? 'Class ' + teacher.class_id : '—')) + '</td>' +
+                    '<td style="vertical-align: top;"><span class="badge ' + boardClass + '">' + boardName + '</span></td>' +
+                    '<td style="vertical-align: top;">' + (teacher.subject_name || '—') + '</td>' +
+                    '</tr>';
+        });
+    }
     
-    var expiringHtml = '<table class="data-table"><thead><tr><th>Name</th><th>Role</th><th>Section</th><th>Class</th><th>Board</th><th>Subject</th><th>Days Left</th></tr></thead><tbody>';
-    $.each(data.expiring_soon_teachers || [], function(i, teacher) {
-        var roleBadge = teacher.user_type == 'T' ? '<span class="badge badge-teacher">Teacher</span>' : '<span class="badge badge-lct">Live Class</span>';
-        var boardName = '';
-        if (teacher.board_id == 'C') boardName = 'CBSE';
-        else if (teacher.board_id == 'I') boardName = 'ICSE';
-        else if (teacher.board_id == 'W') boardName = 'WBBSE';
-        else if (teacher.board_id == 'K') boardName = 'Cambridge';
-        else boardName = teacher.board_id || 'N/A';
-        
-        expiringHtml += '<tr><td style="vertical-align: top;"><strong>' + teacher.full_name + '</strong></td>' +
-                        '<td style="vertical-align: top;">' + roleBadge + '</td>' +
-                        '<td style="vertical-align: top;">' + (teacher.section ? 'Section ' + teacher.section : (teacher.batch_id ? 'Batch ' + teacher.batch_id : 'N/A')) + '</td>' +
-                        '<td style="vertical-align: top;">' + (teacher.class_id ? 'Class ' + teacher.class_id : 'N/A') + '</td>' +
-                        '<td style="vertical-align: top;"><span class="badge badge-cbse">' + boardName + '</span></td>' +
-                        '<td style="vertical-align: top;">' + (teacher.subject_id || 'N/A') + '</td>' +
-                        '<td style="vertical-align: top;"><span class="badge badge-expiring">' + (teacher.days_left || 'N/A') + ' days</span></td>' +
-                        '<tr>';
-    });
-    expiringHtml += '</tbody></tr>';
-    $('#expiringTeachersContainer').html(expiringHtml || '<div class="empty-state">No expiring teachers found</div>');
+    html += '</tbody></table>';
+    $('#allTeachersContainer').html(html);
 }
 
 function updateStudentStatusView(data) {
@@ -1153,34 +1103,38 @@ function updateStudentStatusView(data) {
         $('#studentFilterInfo').hide();
     }
     
-    var activeHtml = '<table class="data-table"><thead><tr><th>Name</th><th>Class</th><th>Board</th></td></thead><tbody>';
+    var activeHtml = '<table class="data-table"><thead><tr><th>Name</th><th>Class</th><th>Board</th></tr></thead><tbody>';
     $.each(data.active_students || [], function(i, s) {
-        activeHtml += '<tr><td style="vertical-align: top;"><strong>' + s.full_name + '</strong></td>' +
-                      '<td style="vertical-align: top;">Class ' + (s.class_id || 'N/A') + '</td>' +
-                      '<td style="vertical-align: top;"><span class="badge badge-cbse">' + (s.board_id || 'N/A') + '</span></td>' +
+        var boardName = s.board_id == 'C' ? 'CBSE' : (s.board_id == 'I' ? 'ICSE' : (s.board_id == 'W' ? 'WBBSE' : (s.board_id == 'K' ? 'Cambridge' : (s.board_id || 'N/A'))));
+        var boardClass = s.board_id == 'C' ? 'badge-cbse' : (s.board_id == 'I' ? 'badge-icse' : (s.board_id == 'W' ? 'badge-wbbse' : (s.board_id == 'K' ? 'badge-cambridge' : 'badge-other')));
+        activeHtml += '<tr><td style="vertical-align: top;"><strong>' + escapeHtml(s.full_name) + '</strong></td>' +
+                      '<td style="vertical-align: top;">' + (s.class_id ? 'Class ' + s.class_id : 'N/A') + '</td>' +
+                      '<td style="vertical-align: top;"><span class="badge ' + boardClass + '">' + boardName + '</span></td>' +
                       '</tr>';
     });
-    activeHtml += '</tbody></tr>';
+    activeHtml += '</tbody></table>';
     $('#activeStudentsContainer').html(activeHtml || '<div class="empty-state">No active students</div>');
     
     var inactiveHtml = '<table class="data-table"><thead><tr><th>Name</th><th>Class</th><th>Board</th></tr></thead><tbody>';
     $.each(data.inactive_students || [], function(i, s) {
-        inactiveHtml += '<tr><td style="vertical-align: top;"><strong>' + s.full_name + '</strong></td>' +
-                        '<td style="vertical-align: top;">Class ' + (s.class_id || 'N/A') + '</td>' +
-                        '<td style="vertical-align: top;"><span class="badge badge-cbse">' + (s.board_id || 'N/A') + '</span></td>' +
+        var boardName = s.board_id == 'C' ? 'CBSE' : (s.board_id == 'I' ? 'ICSE' : (s.board_id == 'W' ? 'WBBSE' : (s.board_id == 'K' ? 'Cambridge' : (s.board_id || 'N/A'))));
+        var boardClass = s.board_id == 'C' ? 'badge-cbse' : (s.board_id == 'I' ? 'badge-icse' : (s.board_id == 'W' ? 'badge-wbbse' : (s.board_id == 'K' ? 'badge-cambridge' : 'badge-other')));
+        inactiveHtml += '<tr><td style="vertical-align: top;"><strong>' + escapeHtml(s.full_name) + '</strong></td>' +
+                        '<td style="vertical-align: top;">' + (s.class_id ? 'Class ' + s.class_id : 'N/A') + '</td>' +
+                        '<td style="vertical-align: top;"><span class="badge ' + boardClass + '">' + boardName + '</span></td>' +
                         '</tr>';
     });
-    inactiveHtml += '</tbody></tr>';
+    inactiveHtml += '</tbody></table>';
     $('#inactiveStudentsContainer').html(inactiveHtml || '<div class="empty-state">No inactive students</div>');
     
-    var expiringHtml = '<table class="data-table"><thead><tr><th>Name</th><th>Class</th><th>Days Left</th></td></thead><tbody>';
+    var expiringHtml = '<table class="data-table"><thead><tr><th>Name</th><th>Class</th><th>Days Left</th></tr></thead><tbody>';
     $.each(data.expiring_soon_students || [], function(i, s) {
-        expiringHtml += '<tr><td style="vertical-align: top;"><strong>' + s.full_name + '</strong></td>' +
-                        '<td style="vertical-align: top;">Class ' + (s.class_id || 'N/A') + '</td>' +
+        expiringHtml += '<tr><td style="vertical-align: top;"><strong>' + escapeHtml(s.full_name) + '</strong></td>' +
+                        '<td style="vertical-align: top;">' + (s.class_id ? 'Class ' + s.class_id : 'N/A') + '</td>' +
                         '<td style="vertical-align: top;"><span class="badge badge-expiring">' + (s.days_left || 'N/A') + ' days</span></td>' +
                         '</tr>';
     });
-    expiringHtml += '</tbody></tr>';
+    expiringHtml += '</tbody></table>';
     $('#expiringStudentsContainer').html(expiringHtml || '<div class="empty-state">No expiring students</div>');
 }
 
@@ -1208,12 +1162,20 @@ function updateSubjectsList(containerId, subjects, valueKey) {
     container.html(html);
 }
 
+function escapeHtml(text) {
+    if (!text) return '';
+    return text.replace(/[&<>]/g, function(m) {
+        if (m === '&') return '&amp;';
+        if (m === '<') return '&lt;';
+        if (m === '>') return '&gt;';
+        return m;
+    });
+}
+
 function showEmptyState() {
     $('#enrollmentTableContainer').html('<div class="empty-state">No data available</div>');
     $('#enrollmentFooter').hide();
-    $('#activeTeachersContainer').html('<div class="empty-state">No data available</div>');
-    $('#inactiveTeachersContainer').html('<div class="empty-state">No data available</div>');
-    $('#expiringTeachersContainer').html('<div class="empty-state">No data available</div>');
+    $('#allTeachersContainer').html('<div class="empty-state">No data available</div>');
     $('#activeStudentsContainer').html('<div class="empty-state">No data available</div>');
     $('#inactiveStudentsContainer').html('<div class="empty-state">No data available</div>');
     $('#expiringStudentsContainer').html('<div class="empty-state">No data available</div>');

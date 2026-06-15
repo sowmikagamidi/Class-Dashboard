@@ -152,10 +152,10 @@ function getAllValidStudents($school_id, $academic_year, $class_id, $batch_id, $
     return $validStudents;
 }
 
-// UPDATED: Teacher Mentor Stats using TX_MENTOR_BATCH_MAP
+// ============================================
+// UPDATED: Teacher Mentor Stats - Simplified (No expiry logic)
+// ============================================
 function getTeacherMentorStats($school_id, $class_id, $batch_id, $board_id, $userObj) {
-    $today = date('Y-m-d');
-    $expiring_soon_date = date('Y-m-d', strtotime('+15 days'));
     
     // Base query with joins to get teacher batch assignments
     $sql = "SELECT DISTINCT 
@@ -165,8 +165,6 @@ function getTeacherMentorStats($school_id, $class_id, $batch_id, $board_id, $use
                 u.mobile_number, 
                 u.user_type, 
                 u.user_status,
-                u.created_dtm, 
-                u.updated_dtm,
                 mbm.batch_id,
                 mbm.board_id as mentor_board_id,
                 mbm.subject_id,
@@ -209,8 +207,6 @@ function getTeacherMentorStats($school_id, $class_id, $batch_id, $board_id, $use
                             u.mobile_number, 
                             u.user_type, 
                             u.user_status,
-                            u.created_dtm, 
-                            u.updated_dtm,
                             mbm.batch_id,
                             mbm.board_id as mentor_board_id,
                             mbm.subject_id,
@@ -232,65 +228,48 @@ function getTeacherMentorStats($school_id, $class_id, $batch_id, $board_id, $use
         $teachers = $userObj->getFullQuery($fallbackSql);
     }
     
-    $active_count = 0;
-    $inactive_count = 0;
-    $expiring_soon_count = 0;
-    $active_teachers = [];
-    $inactive_teachers = [];
-    $expiring_soon_teachers = [];
     $all_teachers = [];
     
+    // Subject name mapping
+    $subjectNames = [
+        'MA' => 'Mathematics', 'SC' => 'Science', 'PH' => 'Physics',
+        'CE' => 'Chemistry', 'BI' => 'Biology', 'CF' => 'Computer Fundas',
+        'AI' => 'Gen AI World', 'PD' => 'Personality Development', 'SE' => 'Spoken English'
+    ];
+    
     foreach ($teachers as $teacher) {
+        $board_value = $teacher['mentor_board_id'] ?? $teacher['batch_board_id'] ?? null;
+        $board_name = '';
+        if ($board_value == 'C') $board_name = 'CBSE';
+        elseif ($board_value == 'I') $board_name = 'ICSE';
+        elseif ($board_value == 'W') $board_name = 'WBBSE';
+        elseif ($board_value == 'K') $board_name = 'Cambridge';
+        else $board_name = $board_value;
+        
         $teacher_data = [
             'user_id' => $teacher['user_id'],
             'full_name' => $teacher['full_name'],
             'email_id' => $teacher['email_id'],
             'mobile_number' => $teacher['mobile_number'],
             'user_type' => $teacher['user_type'],
-            'user_status' => $teacher['user_status'],
             'role' => $teacher['role'],
             'batch_id' => $teacher['batch_id'] ?? null,
             'class_id' => $teacher['class_id'] ?? null,
-            'section' => $teacher['section'] ?? null,
+            'class_display' => $teacher['class_id'] ? 'Class ' . $teacher['class_id'] : 'N/A',
+            'section' => $teacher['section'] ?? 'N/A',
             'subject_id' => $teacher['subject_id'] ?? null,
-            'board_id' => $teacher['mentor_board_id'] ?? $teacher['batch_board_id'] ?? null
+            'subject_name' => $subjectNames[$teacher['subject_id']] ?? ($teacher['subject_id'] ?? 'N/A'),
+            'board_id' => $board_value,
+            'board_name' => $board_name,
+            'status' => 'Active'
         ];
-        
-        // For active teachers
-        $active_count++;
-        $teacher_data['status_type'] = 'Active';
-        $teacher_data['status_badge'] = 'badge-active';
-        
-        // Check for expiring soon based on updated_dtm
-        if (!empty($teacher['updated_dtm'])) {
-            $expiry_check = strtotime($teacher['updated_dtm'] . ' + 365 days');
-            $expiry_date = date('Y-m-d', $expiry_check);
-            
-            if ($expiry_date <= $expiring_soon_date && $expiry_date >= $today) {
-                $teacher_data['days_left'] = ceil((strtotime($expiry_date) - strtotime($today)) / 86400);
-                $teacher_data['status_type'] = 'Expiring Soon';
-                $teacher_data['status_badge'] = 'badge-expiring';
-                $expiring_soon_count++;
-                $expiring_soon_teachers[] = $teacher_data;
-            } else {
-                $active_teachers[] = $teacher_data;
-            }
-        } else {
-            $active_teachers[] = $teacher_data;
-        }
         
         $all_teachers[] = $teacher_data;
     }
     
     return [
         'total_teachers' => count($all_teachers),
-        'active_count' => $active_count,
-        'inactive_count' => $inactive_count,
-        'expiring_soon_count' => $expiring_soon_count,
-        'active_teachers' => $active_teachers,
-        'inactive_teachers' => $inactive_teachers,
-        'expiring_soon_teachers' => $expiring_soon_teachers,
-        'all_teachers' => $all_teachers
+        'teachers_list' => $all_teachers
     ];
 }
 
@@ -424,7 +403,6 @@ function getEnrollmentTableData($school_id, $academic_year, $class_id, $batch_id
     ];
 }
 
-// UPDATED: Enrollment Stats with filters for teachers count
 function getEnrollmentStats($school_id, $academic_year, $class_id, $batch_id, $board_id, $userObj, $validStudents) {
     $totalStudents = count($validStudents);
     
