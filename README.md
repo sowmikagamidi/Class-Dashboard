@@ -4,8 +4,6 @@ A full-featured web dashboard to collect, analyze, and visualize student feedbac
 
 ![PHP Version](https://img.shields.io/badge/PHP-7.4%2B-blue)
 ![MySQL](https://img.shields.io/badge/MySQL-5.7%2B-orange)
-![License](https://img.shields.io/badge/License-MIT-green)
-
 ---
 
 ## 📌 Key Features
@@ -96,4 +94,4 @@ Populate the system with demo teachers and feedback using the provided sample SQ
 ---
 
 
-*Built with ❤️ to help educators understand student feedback better.*
+
